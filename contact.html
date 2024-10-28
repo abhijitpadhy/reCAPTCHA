@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Contact Form with SweetAlert Validation</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.1/dist/sweetalert2.min.css">
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        h2 {
+            text-align: center;
+        }
+        form {
+            background: white;
+            padding: 18px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea, button {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        input:focus, textarea:focus, button:focus {
+            outline: none;
+            border-color: #007BFF;
+        }
+        button {
+            background: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <form id="contactForm" action="https://script.google.com/macros/s/AKfycbxa9VqUT2EOqtbFFA5IxHScBSSxkb7Ye0tFrX3aD1LlUlH1qaJ9weihyN11aubtHI57/exec">
+    <h2>Contact Form</h2>
+
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="Name" required>
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="Email" required>
+
+        <label for="phone">Phone Number:</label>
+        <input type="tel" id="phone" name="Phone" required pattern="[0-9]{10}" title="Please enter a valid 10-digit phone number.">
+
+        <label for="message">Message:</label>
+        <textarea id="message" name="Message" rows="4" required></textarea>
+
+        <!-- reCAPTCHA widget -->
+        <div class="g-recaptcha" data-sitekey="6LegIm4qAAAAAFtTwY78YN4P2BoS225DHhDQo-0G"></div>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.1/dist/sweetalert2.all.min.js"></script>
+    <script>
+        document.getElementById('contactForm').addEventListener('submit', function (event) {
+            event.preventDefault(); // Prevent form submission
+
+            // Get form field values
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim(); // Get phone number
+            const message = document.getElementById('message').value.trim();
+            const recaptchaResponse = grecaptcha.getResponse(); // Get reCAPTCHA response
+
+            // Basic validation checks
+            if (message.length > 500) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Message is too long. Please limit to 500 characters.',
+                });
+                return;
+            }
+
+            // Regular expression to detect links
+            const urlPattern = /https?:\/\/[^\s]+/;
+            if (urlPattern.test(message)) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Links Not Allowed',
+                    text: 'Links are not allowed in the message field.',
+                });
+                return;
+            }
+
+            // Simple spam filter (you can enhance it further)
+            const spamKeywords = /spam|free money|win big/i;
+            if (spamKeywords.test(message)) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Spam Detected',
+                    text: 'Please avoid using spammy words in your message.',
+                });
+                return;
+            }
+
+            // Check if reCAPTCHA was completed
+            if (!recaptchaResponse) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Captcha Required',
+                    text: 'Please complete the reCAPTCHA.',
+                });
+                return;
+            }
+
+            // Prepare form data for submission
+            const formData = {
+                Name: name,
+                Email: email,
+                Phone: phone, // Include phone number
+                Message: message,
+                'g-recaptcha-response': recaptchaResponse // Include reCAPTCHA response
+            };
+
+            // Submit form via Fetch API to Google Apps Script
+            fetch('https://script.google.com/macros/s/AKfycbxa9VqUT2EOqtbFFA5IxHScBSSxkb7Ye0tFrX3aD1LlUlH1qaJ9weihyN11aubtHI57/exec', {
+                method: 'POST',
+                body: new URLSearchParams(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.result === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Form submitted successfully.',
+                    });
+                    // Reset the form fields
+                    document.getElementById('contactForm').reset();
+                    grecaptcha.reset(); // Reset reCAPTCHA
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Submission Failed',
+                        text: data.message || 'An error occurred while submitting the form.',
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Network Error',
+                    text: 'An error occurred while submitting the form. Please try again later.',
+                });
+            });
+        });
+    </script>
+</body>
+</html>
