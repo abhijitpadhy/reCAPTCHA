@@ -56,8 +56,8 @@
     </style>
 </head>
 <body>
-    <form id="contactForm" action="https://script.google.com/macros/s/AKfycbxa9VqUT2EOqtbFFA5IxHScBSSxkb7Ye0tFrX3aD1LlUlH1qaJ9weihyN11aubtHI57/exec">
-    <h2>Contact Form</h2>
+    <form id="contactForm" action="https://script.google.com/macros/s/AKfycbyDC8aMydQyylpJZ6ahr0A9HhdZALMvHOieLP_jiiO0bVfkOXPcx__bxU_lkMRFBLUc/exec">
+        <h2>Contact Form</h2>
 
         <label for="name">Name:</label>
         <input type="text" id="name" name="Name" required>
@@ -71,7 +71,6 @@
         <label for="message">Message:</label>
         <textarea id="message" name="Message" rows="4" required></textarea>
 
-        <!-- reCAPTCHA widget -->
         <div class="g-recaptcha" data-sitekey="6LegIm4qAAAAAFtTwY78YN4P2BoS225DHhDQo-0G"></div>
 
         <button type="submit">Submit</button>
@@ -79,15 +78,27 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.1/dist/sweetalert2.all.min.js"></script>
     <script>
-        document.getElementById('contactForm').addEventListener('submit', function (event) {
-            event.preventDefault(); // Prevent form submission
+        let isSubmitting = false; // Flag to prevent duplicate submissions
 
-            // Get form field values
+        document.getElementById('contactForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            if (isSubmitting) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Already Submitted',
+                    text: 'Your form submission is already in progress.',
+                });
+                return;
+            }
+
+            isSubmitting = true; // Set the flag to true
+
             const name = document.getElementById('name').value.trim();
             const email = document.getElementById('email').value.trim();
-            const phone = document.getElementById('phone').value.trim(); // Get phone number
+            const phone = document.getElementById('phone').value.trim();
             const message = document.getElementById('message').value.trim();
-            const recaptchaResponse = grecaptcha.getResponse(); // Get reCAPTCHA response
+            const recaptchaResponse = grecaptcha.getResponse();
 
             // Basic validation checks
             if (message.length > 500) {
@@ -96,10 +107,10 @@
                     title: 'Oops...',
                     text: 'Message is too long. Please limit to 500 characters.',
                 });
+                isSubmitting = false; // Reset the flag
                 return;
             }
 
-            // Regular expression to detect links
             const urlPattern = /https?:\/\/[^\s]+/;
             if (urlPattern.test(message)) {
                 Swal.fire({
@@ -107,10 +118,10 @@
                     title: 'Links Not Allowed',
                     text: 'Links are not allowed in the message field.',
                 });
+                isSubmitting = false; // Reset the flag
                 return;
             }
 
-            // Simple spam filter (you can enhance it further)
             const spamKeywords = /spam|free money|win big/i;
             if (spamKeywords.test(message)) {
                 Swal.fire({
@@ -118,31 +129,33 @@
                     title: 'Spam Detected',
                     text: 'Please avoid using spammy words in your message.',
                 });
+                isSubmitting = false; // Reset the flag
                 return;
             }
 
-            // Check if reCAPTCHA was completed
             if (!recaptchaResponse) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Captcha Required',
                     text: 'Please complete the reCAPTCHA.',
                 });
+                isSubmitting = false; // Reset the flag
                 return;
             }
 
-            // Prepare form data for submission
             const formData = {
                 Name: name,
                 Email: email,
-                Phone: phone, // Include phone number
+                Phone: phone,
                 Message: message,
-                'g-recaptcha-response': recaptchaResponse // Include reCAPTCHA response
+                'g-recaptcha-response': recaptchaResponse
             };
 
-            // Submit form via Fetch API to Google Apps Script
-            fetch('https://script.google.com/macros/s/AKfycbxa9VqUT2EOqtbFFA5IxHScBSSxkb7Ye0tFrX3aD1LlUlH1qaJ9weihyN11aubtHI57/exec', {
+            fetch('https://script.google.com/macros/s/AKfycbyDC8aMydQyylpJZ6ahr0A9HhdZALMvHOieLP_jiiO0bVfkOXPcx__bxU_lkMRFBLUc/exec', {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
                 body: new URLSearchParams(formData)
             })
             .then(response => response.json())
@@ -153,9 +166,8 @@
                         title: 'Success!',
                         text: 'Form submitted successfully.',
                     });
-                    // Reset the form fields
                     document.getElementById('contactForm').reset();
-                    grecaptcha.reset(); // Reset reCAPTCHA
+                    grecaptcha.reset();
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -165,11 +177,15 @@
                 }
             })
             .catch(error => {
+                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Network Error',
                     text: 'An error occurred while submitting the form. Please try again later.',
                 });
+            })
+            .finally(() => {
+                isSubmitting = false; // Reset the flag in finally to allow future submissions
             });
         });
     </script>
